@@ -7,14 +7,11 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -g3")
 set(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "" FORCE)
 ######### SET CMAKE END #########
 
-####### SET TEGRA FLAG ##########
-option(WITH_TEGRA "Build for Jetson Family" ON)
-if(WITH_TEGRA)
-  add_definitions(-DIS_TEGRA)
-endif()
-####### END TEGRA FLAG ##########
-
-file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/app_main.cpp")
+include_directories(${PROJECT_SOURCE_DIR}/include)
+file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/app_main.cpp"
+                  "${PROJECT_SOURCE_DIR}/src/context.cpp"
+                  "${PROJECT_SOURCE_DIR}/src/pipeline.cpp"
+                  )
 
 find_package(Boost REQUIRED system)
 link_libraries(${Boost_SYSTEM_LIBRARY})
