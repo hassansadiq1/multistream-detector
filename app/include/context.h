@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <vector>
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -43,10 +44,13 @@ class SourceProperties{
 class sourceManager{
     public:
     unordered_map<int, SourceProperties*> allSources;
+    unordered_map<int, int> allSourcesStatus;
+    int num_sources = 0;
     pthread_mutex_t sourceMapMutex;
 
     bool sourceExists(int source_id);
     SourceProperties* getSourceProperties(int source_id);
+
 };
 
 class ProjectContext

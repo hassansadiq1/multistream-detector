@@ -97,7 +97,7 @@ void Pipeline::Configure()
     g_object_set (G_OBJECT (nvosd), "process-mode", OSD_PROCESS_MODE,
         "display-text", OSD_DISPLAY_TEXT, NULL);
 
-    g_object_set (G_OBJECT (sink), "qos", 0, NULL);
+    g_object_set (G_OBJECT (sink), "qos", 0, "sync", 0, NULL);
 }
 
 void Pipeline::ConstructPipeline()
@@ -111,9 +111,8 @@ void Pipeline::ConstructPipeline()
         nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
     /* we link the elements together
     * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    printf("right\n\n");
-    if (!gst_element_link_many (streammux, queue1, pgie, queue2, tiler, queue3,
-            nvvidconv, queue4, nvosd, queue5, transform, sink, NULL)) {
+    if (!gst_element_link_many (streammux, queue1, pgie, tiler,
+            nvvidconv, nvosd, transform, sink, NULL)) {
         g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
     }
@@ -133,12 +132,14 @@ void Pipeline::ConstructPipeline()
 void Pipeline::RunPipelineAsync()
 {
     // and source count is greater than zero
-    if (num_sources > 0)
-    {
-        // Set the pipeline to "playing" state
-        g_print("Setting pipeline state to Playing");
-        gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
-        g_main_loop_run(this->loop);
+    while(1){
+        if (num_sources > 0)
+        {
+            // Set the pipeline to "playing" state
+            g_print("Setting pipeline state to Playing");
+            gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
+            g_main_loop_run(this->loop);
+        }
     }
     return;
 }

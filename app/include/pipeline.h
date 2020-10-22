@@ -14,7 +14,7 @@ using namespace std;
 class Pipeline
 {
 public:
-
+    bool running;
     GMainLoop *loop = NULL;
     GstElement *pipeline = NULL, *streammux = NULL, *sink = NULL, *pgie = NULL,
         *queue1, *queue2, *queue3, *queue4, *queue5, *nvvidconv = NULL,
@@ -28,7 +28,7 @@ public:
     guint i, num_sources;
     guint tiler_rows, tiler_columns;
     guint pgie_batch_size;
-
+    std::vector<GstElement*> sourcebins;
     sourceManager source_manager;
     ProjectContext *context;
 

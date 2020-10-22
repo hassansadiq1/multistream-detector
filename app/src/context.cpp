@@ -7,7 +7,7 @@ ProjectContext::ProjectContext()
     MUXER_BATCH_SIZE = 4;
     MUXER_BATCH_TIMEOUT_USEC = 40000;
     TILED_OUTPUT_WIDTH = 1920;
-    TILED_OUTPUT_WIDTH = 1080;
+    TILED_OUTPUT_HEIGHT = 1080;
 }
 
 void ProjectContext::loadConfig(char *str1, char *str2) {
@@ -51,8 +51,7 @@ void ProjectContext::loadSourceProperties(SourceProperties *properties, int i){
     
     temp_str1 = "uri" + to_string(i);
     loadStrConfig((char *) temp_str1.c_str(), temp_str2);
-    properties->uri = temp_char;
-    
+    properties->uri = temp_str2;
     temp_str1 = "source_id" + to_string(i);
     loadConfig((char *) temp_str1.c_str(), temp_char);
     properties->source_id = atoi(temp_char);
