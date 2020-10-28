@@ -13,9 +13,6 @@ file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/app_main.cpp"
                   "${PROJECT_SOURCE_DIR}/src/pipeline.cpp"
                   )
 
-find_package(Boost REQUIRED system)
-link_libraries(${Boost_SYSTEM_LIBRARY})
-
 find_package(PkgConfig)
 pkg_check_modules(GST REQUIRED gstreamer-1.0 gstreamer-video-1.0)
 MESSAGE(STATUS "GST= ${GST_LIBRARIES}")
@@ -42,7 +39,7 @@ link_libraries(nvds_utils)
 ######### ADD NVDS_LIBS END #########
 
 set(libs_collection pthread #json-glib-1.0
-        dl m rt -lboost_system -lboost_filesystem ssl
+        dl m rt ssl
         )
 
 add_executable(app_main ${SOURCES})
