@@ -262,7 +262,7 @@ int Execute_Command( const std::string&  command,
 }
 
 bool ping_ip_cam(string uri){
-    std::string command = "ping -c 1 " + uri + " 2>&1";
+    std::string command = "ffmpeg -y -i " + uri + " -vframes 1 do.jpg 2>&1";
 
     std::string details;
 

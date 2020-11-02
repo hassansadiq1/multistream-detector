@@ -28,6 +28,7 @@ cd ./app
      sudo apt-get install -y libopenblas-dev
      sudo apt-get install -y protobuf-compiler
      sudo apt-get install -y libprotobuf-dev protobuf-compiler
+     sudo apt-get install -y ffmpeg
 ``` 
 # 3.	OS dependencies
 ## You need to have Jetpack 4.4 installed with following:  
