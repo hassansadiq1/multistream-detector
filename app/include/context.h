@@ -13,12 +13,28 @@
 
 #define PGIE_CONFIG_FILE "../../configs/pgie_detector.txt"
 #define SOURCE_PROPERTIES  "../../configs/source_properties.ini"
+#define TRACKER_CONFIG_FILE "../../configs/tracker_config.txt"
 
 #define MAX_DISPLAY_LEN 64
 #define PGIE_CLASS_ID_VEHICLE 0
 #define PGIE_CLASS_ID_BICYCLE 1
 #define PGIE_CLASS_ID_PERSON 2
 #define PGIE_CLASS_ID_ROADSIGN 3
+
+#define CONFIG_GROUP_TRACKER "tracker"
+#define CONFIG_GROUP_TRACKER_WIDTH "tracker-width"
+#define CONFIG_GROUP_TRACKER_HEIGHT "tracker-height"
+#define CONFIG_GROUP_TRACKER_LL_CONFIG_FILE "ll-config-file"
+#define CONFIG_GROUP_TRACKER_LL_LIB_FILE "ll-lib-file"
+#define CONFIG_GROUP_TRACKER_ENABLE_BATCH_PROCESS "enable-batch-process"
+
+/* Tracker config parsing */
+
+#define CHECK_ERROR(error) \
+    if (error) { \
+        g_printerr ("Error while parsing config file: %s\n", error->message); \
+        goto done; \
+    }
 
 /* By default, OSD process-mode is set to CPU_MODE. To change mode, set as:
  * 1: GPU mode (for Tesla only)

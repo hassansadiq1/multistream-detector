@@ -19,6 +19,7 @@ public:
     GstElement *pipeline = NULL, *streammux = NULL, *sink = NULL, *pgie = NULL,
         *queue1, *queue2, *queue3, *queue4, *queue5, *nvvidconv = NULL,
         *nvosd = NULL, *tiler = NULL;
+    GstElement *nvtracker = NULL;
 #ifdef __aarch64__
     GstElement *transform = NULL;
 #endif
@@ -45,6 +46,8 @@ public:
     void RunPipelineAsync();
 
     static gboolean BusCall(GstBus *bus, GstMessage *msg, gpointer data);
+    static gchar * get_absolute_file_path (gchar *cfg_file_path, gchar *file_path);
+    static gboolean set_tracker_properties (GstElement *nvtracker);
 
     Pipeline();
     
