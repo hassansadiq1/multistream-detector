@@ -243,10 +243,10 @@ void Pipeline::RunPipelineAsync()
 {
     // and source count is greater than zero
     while(1){
+        g_print("Setting pipeline state to Playing");
         if (num_sources > 0)
         {
             // Set the pipeline to "playing" state
-            g_print("Setting pipeline state to Playing");
             gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
             g_main_loop_run(this->loop);
         }

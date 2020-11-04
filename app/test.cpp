@@ -230,46 +230,9 @@ create_source_bin (guint index, gchar * uri)
     return bin;
 }
 
-int Execute_Command( const std::string&  command,
-                     std::string&        output,
-                     const std::string&  mode = "r")
-{
-    // Create the stringstream
-    std::stringstream sout;
-
-    // Run Popen
-    FILE *in;
-    char buff[512];
-
-    // Test output
-    if(!(in = popen(command.c_str(), mode.c_str()))){
-        return 1;
-    }
-
-    // Parse output
-    while(fgets(buff, sizeof(buff), in)!=NULL){
-        sout << buff;
-    }
-
-    // Close
-    int exit_code = pclose(in);
-
-    // set output
-    output = sout.str();
-
-    // Return exit code
-    return exit_code;
-}
-
 bool ping_ip_cam(string uri){
-    std::string command = "ffmpeg -y -i " + uri + " -vframes 1 do.jpg 2>&1";
-
-    std::string details;
-
-    // Execute the ping command
-    int code = Execute_Command(command, details);
-
-    return (code == 0);
+    sleep(300);
+    return true;
 }
 
 int
@@ -389,7 +352,6 @@ main (int argc, char *argv[])
                 uri = it->second->uri;
 
             if(ping_ip_cam(uri)){
-                cout << "Camera Ping Successful. Adding it again to pipeline\n";
                 gchar pad_name[16] = { };
                 GstPad *sinkpad;
                 g_snprintf(pad_name, 15, "sink_%u", x.first);
@@ -428,9 +390,6 @@ main (int argc, char *argv[])
 
                 GstStateChangeReturn stateChange;
                 stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
-                gst_element_set_state(pipeline.pipeline, GST_STATE_PAUSED);
-                stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
-                gst_element_set_state(pipeline.pipeline, GST_STATE_PLAYING);
 
                 bool sourcebinStatus = false;
 
@@ -450,7 +409,6 @@ main (int argc, char *argv[])
                 if(it1 != srcmanager.allSourcesStatus.end())
                 it1->second = 1;
                 }
-                cout << "Camera Ping Unsuccessful.\n";
             }
         }
         sleep(5);
