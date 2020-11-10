@@ -20,6 +20,7 @@ public:
         *queue1, *queue2, *queue3, *queue4, *queue5, *nvvidconv = NULL,
         *nvosd = NULL, *tiler = NULL;
     GstElement *nvtracker = NULL;
+    GstElement *postprocessing = NULL;
 #ifdef __aarch64__
     GstElement *transform = NULL;
 #endif

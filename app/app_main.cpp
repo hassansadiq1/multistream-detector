@@ -371,7 +371,9 @@ main (int argc, char *argv[])
 
             case GST_STATE_CHANGE_FAILURE:
                 g_printerr("State change: Failure");
-                srcmanager.allSourcesStatus.insert({i,0}).second;
+                auto it = srcmanager.allSourcesStatus.find(i);
+                if(it != srcmanager.allSourcesStatus.end())
+                    it->second = 0;
                 break;
             default:
                 break;
@@ -427,7 +429,6 @@ main (int argc, char *argv[])
                 gst_object_unref (resinkpad);
 
                 GstStateChangeReturn stateChange;
-                stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
                 gst_element_set_state(pipeline.pipeline, GST_STATE_PAUSED);
                 stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
                 gst_element_set_state(pipeline.pipeline, GST_STATE_PLAYING);

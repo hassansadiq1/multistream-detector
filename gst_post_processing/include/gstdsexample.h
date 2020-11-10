@@ -36,14 +36,14 @@
 #include "nvbufsurftransform.h"
 #include "gst-nvquery.h"
 #include "gstnvdsmeta.h"
-#include "dsexample_lib/dsexample_lib.h"
+#include "dsexample_lib.h"
 
 /* Package and library details required for plugin_init */
 #define PACKAGE "dsexample"
 #define VERSION "1.0"
 #define LICENSE "Proprietary"
-#define DESCRIPTION "NVIDIA example plugin for integration with DeepStream on DGPU"
-#define BINARY_PACKAGE "NVIDIA DeepStream 3rdparty IP integration example plugin"
+#define DESCRIPTION "TechLab"
+#define BINARY_PACKAGE "NVIDIA DeepStream 3rdparty plugin"
 #define URL "http://nvidia.com/"
 
 

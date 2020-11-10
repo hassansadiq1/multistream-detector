@@ -1,4 +1,5 @@
 #include "pipeline.h"
+#include <unistd.h>
 
 
 Pipeline::Pipeline()
@@ -109,37 +110,40 @@ gboolean Pipeline::set_tracker_properties(GstElement *nvtracker)
 
 void Pipeline::createElements()
 {
-/* Create gstreamer elements */
-/* Create Pipeline element that will form a connection of other elements */
+    /* Create gstreamer elements */
+    /* Create Pipeline element that will form a connection of other elements */
     pipeline = gst_pipeline_new ("multistream-detector-pipeline");
 
-/* Create nvstreammux instance to form batches from one or more sources. */
+    /* Create nvstreammux instance to form batches from one or more sources. */
     streammux = gst_element_factory_make ("nvstreammux", "stream-muxer");
 
-/* Use nvinfer to infer on batched frame. */
+    /* Use nvinfer to infer on batched frame. */
     pgie = gst_element_factory_make ("nvinfer", "primary-nvinference-engine");
 
-/* We need to have a tracker to track the identified objects */
+    /* We need to have a tracker to track the identified objects */
     nvtracker = gst_element_factory_make ("nvtracker", "tracker");
 
-/* Add queue elements between every two elements */
+    /*custom plugin for post processing */
+    postprocessing = gst_element_factory_make("dsexample", "post-processing");
+
+    /* Add queue elements between every two elements */
     queue1 = gst_element_factory_make ("queue", "queue1");
     queue2 = gst_element_factory_make ("queue", "queue2");
     queue3 = gst_element_factory_make ("queue", "queue3");
     queue4 = gst_element_factory_make ("queue", "queue4");
     queue5 = gst_element_factory_make ("queue", "queue5");
 
-/* Use nvtiler to composite the batched frames into a 2D tiled array based
-* on the source of the frames. */
+    /* Use nvtiler to composite the batched frames into a 2D tiled array based
+    * on the source of the frames. */
     tiler = gst_element_factory_make ("nvmultistreamtiler", "nvtiler");
 
-/* Use convertor to convert from NV12 to RGBA as required by nvosd */
+    /* Use convertor to convert from NV12 to RGBA as required by nvosd */
     nvvidconv = gst_element_factory_make ("nvvideoconvert", "nvvideo-converter");
 
-/* Create OSD to draw on the converted RGBA buffer */
+    /* Create OSD to draw on the converted RGBA buffer */
     nvosd = gst_element_factory_make ("nvdsosd", "nv-onscreendisplay");
 
-/* Finally render the osd output */
+    /* Finally render the osd output */
 #ifdef __aarch64__
     transform = gst_element_factory_make ("nvegltransform", "nvegl-transform");
 #endif
@@ -160,6 +164,11 @@ void Pipeline::Verify()
 
     if (!queue1 || !queue2 || !queue3 || !queue4 || !queue5) {
         g_printerr ("Queue elements could not be created. Exiting.\n");
+        exit(-1);
+    }
+
+    if(!postprocessing) {
+        g_printerr ("Postprocessing element could not be created. Exiting.\n");
         exit(-1);
     }
 
@@ -218,10 +227,10 @@ void Pipeline::ConstructPipeline()
 /* we add all elements into the pipeline */
 #ifdef __aarch64__
     gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
-        nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
+        postprocessing, nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
     /* we link the elements together
     * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, tiler,
+    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, postprocessing, tiler,
             nvvidconv, nvosd, transform, sink, NULL)) {
         g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
@@ -242,13 +251,14 @@ void Pipeline::ConstructPipeline()
 void Pipeline::RunPipelineAsync()
 {
     // and source count is greater than zero
+    g_print("Setting pipeline state to Playing");
     while(1){
-        g_print("Setting pipeline state to Playing");
         if (num_sources > 0)
         {
             // Set the pipeline to "playing" state
             gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
             g_main_loop_run(this->loop);
+            sleep(1);
         }
     }
     return;
