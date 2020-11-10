@@ -44,4 +44,4 @@ set(libs_collection pthread #json-glib-1.0
 
 add_executable(app_main ${SOURCES})
 target_link_libraries(app_main ${libs_collection})
-install(TARGETS app_main DESTINATION ${PROJECT_SOURCE_DIR}/../app)
+#install(TARGETS app_main DESTINATION ${PROJECT_SOURCE_DIR}/../app)

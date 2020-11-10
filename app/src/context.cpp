@@ -55,26 +55,25 @@ void ProjectContext::loadSourceProperties(SourceProperties *properties, int i){
     temp_str1 = "source_id" + to_string(i);
     loadConfig((char *) temp_str1.c_str(), temp_char);
     properties->source_id = atoi(temp_char);
+
+    //polygon pareameters
+    temp_str1 = "TopLeftX" + to_string(i);
+    loadConfig((char *) temp_str1.c_str(), temp_char);
+    properties->TopLeftX = atoi(temp_char);
+    temp_str1 = "TopLeftY" + to_string(i);
+    loadConfig((char *) temp_str1.c_str(), temp_char);
+    properties->TopLeftY = atoi(temp_char);
+    temp_str1 = "BottomRightX" + to_string(i);
+    loadConfig((char *) temp_str1.c_str(), temp_char);
+    properties->BottomRightX = atoi(temp_char);
+    temp_str1 = "BottomRightY" + to_string(i);
+    loadConfig((char *) temp_str1.c_str(), temp_char);
+    properties->BottomRightY = atoi(temp_char);
 }
 
 bool sourceManager::sourceExists(int source_id){
-
-        int cnt = this->allSources.count(source_id);
-        if (cnt == 0)
-        {
-            return false;
-        }
-        return true;
 }
 
 SourceProperties* sourceManager::getSourceProperties(int source_id){
-    int cnt = this->allSources.count(source_id);
-    if (cnt != 0)
-    {
-        pthread_mutex_lock(&this->sourceMapMutex);
-        unordered_map<int, SourceProperties*>::iterator it = this->allSources.find(source_id);
-        pthread_mutex_unlock(&this->sourceMapMutex);
-        return it->second;
-    }
     return nullptr;
 }

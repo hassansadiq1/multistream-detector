@@ -13,7 +13,7 @@
 
 #define PGIE_CONFIG_FILE "../../configs/pgie_detector.txt"
 #define SOURCE_PROPERTIES  "../../configs/source_properties.ini"
-#define TRACKER_CONFIG_FILE "../../configs/tracker_config.txt"
+#define TRACKER_CONFIG_FILE (char*)"../../configs/tracker_config.txt"
 
 #define MAX_DISPLAY_LEN 64
 #define PGIE_CLASS_ID_VEHICLE 0
@@ -55,12 +55,16 @@ class SourceProperties{
     public:
     string uri;
     int source_id;
+    int TopLeftX;
+    int TopLeftY;
+    int BottomRightX;
+    int BottomRightY;
 };
 
 class sourceManager{
     public:
-    unordered_map<int, SourceProperties*> allSources;
-    unordered_map<int, int> allSourcesStatus;
+    std::vector<SourceProperties*> allSources;
+    std::vector<int> allSourcesStatus;
     int num_sources = 0;
     pthread_mutex_t sourceMapMutex;
 

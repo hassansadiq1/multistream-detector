@@ -89,8 +89,8 @@ tiler_src_pad_buffer_probe (GstPad * pad, GstPadProbeInfo * info,
 static gboolean
 bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
-  GMainLoop *loop = (GMainLoop *) data;
-  switch (GST_MESSAGE_TYPE (msg)) {
+    GMainLoop *loop = (GMainLoop *) data;
+    switch (GST_MESSAGE_TYPE (msg)) {
     case GST_MESSAGE_EOS:
         g_print ("End of stream\n");
         g_main_loop_quit (loop);
@@ -129,9 +129,7 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
             if (gst_nvmessage_parse_stream_eos (msg, &stream_id)) {
                 g_print ("Got EOS from stream %d\n", stream_id);
             }
-        auto it = srcmanager.allSourcesStatus.find(stream_id);
-        if(it != srcmanager.allSourcesStatus.end())
-            it->second = 0;
+            srcmanager.allSourcesStatus[stream_id] = 0;
         }
         break;
     }
@@ -323,8 +321,8 @@ main (int argc, char *argv[])
         SourceProperties* src = new SourceProperties;
         pipeline.context->loadSourceProperties(src, i);
         cout << "Adding: " << src->uri << endl;
-        srcmanager.allSources.insert({i, src}).second;
-        srcmanager.allSourcesStatus.insert({i,1}).second;
+        srcmanager.allSources.push_back(src);
+        srcmanager.allSourcesStatus.push_back(1);
         srcmanager.num_sources++;
 
         GstPad *sinkpad, *srcpad;
@@ -371,9 +369,7 @@ main (int argc, char *argv[])
 
             case GST_STATE_CHANGE_FAILURE:
                 g_printerr("State change: Failure");
-                auto it = srcmanager.allSourcesStatus.find(i);
-                if(it != srcmanager.allSourcesStatus.end())
-                    it->second = 0;
+                srcmanager.allSourcesStatus[i] = 0;
                 break;
             default:
                 break;
@@ -383,73 +379,68 @@ main (int argc, char *argv[])
     }
 
     while(running){
-        for (auto x : srcmanager.allSourcesStatus){
-        if(x.second == 0){
-            string uri = "";
-            auto it = srcmanager.allSources.find(x.first);
-            if(it != srcmanager.allSources.end()) 
-                uri = it->second->uri;
+        for (int i = 0; i < srcmanager.allSources.size(); i++){
+            if(srcmanager.allSourcesStatus[i] == 0){
+                string uri = srcmanager.allSources[i]->uri;
 
-            if(ping_ip_cam(uri)){
-                cout << "Camera Ping Successful. Adding it again to pipeline\n";
-                gchar pad_name[16] = { };
-                GstPad *sinkpad;
-                g_snprintf(pad_name, 15, "sink_%u", x.first);
-                sinkpad = gst_element_get_static_pad(pipeline.streammux, pad_name);
-                gst_element_release_request_pad(pipeline.streammux, sinkpad);
-                gst_element_set_state(pipeline.sourcebins[x.first], GST_STATE_NULL);
-                gst_bin_remove(GST_BIN (pipeline.pipeline), pipeline.sourcebins[x.first]);
-                gst_object_unref(sinkpad);
+                if(ping_ip_cam(uri)){
+                    cout << "Camera Ping Successful. Adding it again to pipeline\n";
+                    gchar pad_name[16] = { };
+                    GstPad *sinkpad;
+                    g_snprintf(pad_name, 15, "sink_%u", i);
+                    sinkpad = gst_element_get_static_pad(pipeline.streammux, pad_name);
+                    gst_element_release_request_pad(pipeline.streammux, sinkpad);
+                    gst_element_set_state(pipeline.sourcebins[i], GST_STATE_NULL);
+                    gst_bin_remove(GST_BIN (pipeline.pipeline), pipeline.sourcebins[i]);
+                    gst_object_unref(sinkpad);
 
-                GstPad *resinkpad, *srcpad;
+                    GstPad *resinkpad, *srcpad;
 
-                GstElement *source_bin = create_source_bin (x.first, (char *)uri.c_str());
-                if (!source_bin) {
-                    g_printerr ("Failed to create source bin. Exiting.\n");
-                }
-                gst_bin_add (GST_BIN (pipeline.pipeline), source_bin);
-                pipeline.sourcebins[x.first] = source_bin;
+                    GstElement *source_bin = create_source_bin (i, (char *)uri.c_str());
+                    if (!source_bin) {
+                        g_printerr ("Failed to create source bin. Exiting.\n");
+                    }
+                    gst_bin_add (GST_BIN (pipeline.pipeline), source_bin);
+                    pipeline.sourcebins[i] = source_bin;
 
-                resinkpad = gst_element_get_request_pad (pipeline.streammux, pad_name);
-                if (!resinkpad) {
-                    g_printerr ("Streammux request resink pad failed. Exiting.\n");
-                }
-                srcpad = gst_element_get_static_pad (source_bin, "src");
-                if (!srcpad) {
-                    g_printerr ("Failed to get src pad of source bin. Exiting.\n");
-                } else
-                    g_printerr ("Successfully get src pad of source bin.\n");
+                    resinkpad = gst_element_get_request_pad (pipeline.streammux, pad_name);
+                    if (!resinkpad) {
+                        g_printerr ("Streammux request resink pad failed. Exiting.\n");
+                    }
+                    srcpad = gst_element_get_static_pad (source_bin, "src");
+                    if (!srcpad) {
+                        g_printerr ("Failed to get src pad of source bin. Exiting.\n");
+                    } else
+                        g_printerr ("Successfully get src pad of source bin.\n");
 
-                if (gst_pad_link (srcpad, resinkpad) != GST_PAD_LINK_OK) {
-                    g_printerr ("Failed to link source bin to restream muxer. Exiting.\n");
-                } else 
-                    g_printerr ("Successfully link source bin to restream muxer.\n");
+                    if (gst_pad_link (srcpad, resinkpad) != GST_PAD_LINK_OK) {
+                        g_printerr ("Failed to link source bin to restream muxer. Exiting.\n");
+                    } else 
+                        g_printerr ("Successfully link source bin to restream muxer.\n");
 
-                gst_object_unref (srcpad);
-                gst_object_unref (resinkpad);
+                    gst_object_unref (srcpad);
+                    gst_object_unref (resinkpad);
 
-                GstStateChangeReturn stateChange;
-                gst_element_set_state(pipeline.pipeline, GST_STATE_PAUSED);
-                stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
-                gst_element_set_state(pipeline.pipeline, GST_STATE_PLAYING);
+                    GstStateChangeReturn stateChange;
+                    gst_element_set_state(pipeline.pipeline, GST_STATE_PAUSED);
+                    stateChange = gst_element_set_state(source_bin, GST_STATE_PLAYING);
+                    gst_element_set_state(pipeline.pipeline, GST_STATE_PLAYING);
 
-                bool sourcebinStatus = false;
+                    bool sourcebinStatus = false;
 
-                switch (stateChange)
-                {
-                    case GST_STATE_CHANGE_SUCCESS:
-                        g_printerr("State change: Success");
-                        sourcebinStatus = true;
-                        break;
-                    case GST_STATE_CHANGE_FAILURE:
-                        g_printerr("State change: Failure");
-                        break;
-                    default:
-                        break;
-                }
-                auto it1 = srcmanager.allSourcesStatus.find(x.first);
-                if(it1 != srcmanager.allSourcesStatus.end())
-                it1->second = 1;
+                    switch (stateChange)
+                    {
+                        case GST_STATE_CHANGE_SUCCESS:
+                            g_printerr("State change: Success");
+                            srcmanager.allSourcesStatus[i] = 1;
+                            break;
+                        case GST_STATE_CHANGE_FAILURE:
+                            g_printerr("State change: Failure");
+                            srcmanager.allSourcesStatus[i] = 0;
+                            break;
+                        default:
+                            break;
+                    }
                 }
                 cout << "Camera Ping Unsuccessful.\n";
             }
