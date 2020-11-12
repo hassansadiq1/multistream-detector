@@ -290,6 +290,9 @@ main (int argc, char *argv[])
     pipeline.createElements();
     pipeline.Verify();
     pipeline.Configure();
+    g_object_set (G_OBJECT (pipeline.postprocessing),
+        "source-manager", &srcmanager, NULL);
+
 
     /* we add a message handler */
     pipeline.bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline.pipeline));
@@ -310,17 +313,17 @@ main (int argc, char *argv[])
     gst_object_unref (pipeline.tiler_src_pad);
 
     PipelineExecutor = thread(&Pipeline::RunPipelineAsync, pipeline);
-    cout<<"No. of sources: " << pipeline.num_sources << endl;
+    std::cout<<"No. of sources: " << pipeline.num_sources << endl;
 
     for (int i = 0; i < pipeline.num_sources; i++) {
         if (srcmanager.num_sources >= pipeline.context->MUXER_BATCH_SIZE)
         {
-            cout << "Muxer batch size reached\n";
+            std::cout << "Muxer batch size reached\n";
             continue;
         }
         SourceProperties* src = new SourceProperties;
         pipeline.context->loadSourceProperties(src, i);
-        cout << "Adding: " << src->uri << endl;
+        std::cout << "Adding: " << src->uri << endl;
         srcmanager.allSources.push_back(src);
         srcmanager.allSourcesStatus.push_back(1);
         srcmanager.num_sources++;
@@ -384,7 +387,7 @@ main (int argc, char *argv[])
                 string uri = srcmanager.allSources[i]->uri;
 
                 if(ping_ip_cam(uri)){
-                    cout << "Camera Ping Successful. Adding it again to pipeline\n";
+                    std::cout << "Camera Ping Successful. Adding it again to pipeline\n";
                     gchar pad_name[16] = { };
                     GstPad *sinkpad;
                     g_snprintf(pad_name, 15, "sink_%u", i);
@@ -442,7 +445,7 @@ main (int argc, char *argv[])
                             break;
                     }
                 }
-                cout << "Camera Ping Unsuccessful.\n";
+                std::cout << "Camera Ping Unsuccessful.\n";
             }
         }
         sleep(5);

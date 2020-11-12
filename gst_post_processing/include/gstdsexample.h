@@ -37,6 +37,7 @@
 #include "gst-nvquery.h"
 #include "gstnvdsmeta.h"
 #include "dsexample_lib.h"
+#include "context.h"
 
 /* Package and library details required for plugin_init */
 #define PACKAGE "dsexample"
@@ -105,6 +106,8 @@ struct _GstDsExample
 
   // Boolean indicating if to blur the detected objects
   gboolean blur_objects;
+
+  sourceManager *srcmanager;
 };
 
 // Boiler plate stuff

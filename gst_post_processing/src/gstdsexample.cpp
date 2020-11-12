@@ -44,7 +44,8 @@ enum
   PROP_PROCESSING_HEIGHT,
   PROP_PROCESS_FULL_FRAME,
   PROP_BLUR_OBJECTS,
-  PROP_GPU_DEVICE_ID
+  PROP_GPU_DEVICE_ID,
+  PROP_SRC_MANAGER
 };
 
 #define CHECK_NVDS_MEMORY_AND_GPUID(object, surface)  \
@@ -66,8 +67,8 @@ enum
 
 /* Default values for properties */
 #define DEFAULT_UNIQUE_ID 15
-#define DEFAULT_PROCESSING_WIDTH 640
-#define DEFAULT_PROCESSING_HEIGHT 480
+#define DEFAULT_PROCESSING_WIDTH 1280
+#define DEFAULT_PROCESSING_HEIGHT 720
 #define DEFAULT_PROCESS_FULL_FRAME TRUE
 #define DEFAULT_BLUR_OBJECTS FALSE
 #define DEFAULT_GPU_ID 0
@@ -79,6 +80,8 @@ enum
 
 #define MIN_INPUT_OBJECT_WIDTH 16
 #define MIN_INPUT_OBJECT_HEIGHT 16
+
+static bool notification = 1;
 
 #define CHECK_NPP_STATUS(npp_status,error_str) do { \
   if ((npp_status) != NPP_SUCCESS) { \
@@ -211,6 +214,14 @@ gst_dsexample_class_init (GstDsExampleClass * klass)
           GParamFlags
           (G_PARAM_READWRITE |
               G_PARAM_STATIC_STRINGS | GST_PARAM_MUTABLE_READY)));
+
+  g_object_class_install_property (gobject_class, PROP_SRC_MANAGER,
+      g_param_spec_pointer ("source-manager",
+          "source management",
+          "contains all sources information",
+          GParamFlags
+          (G_PARAM_READWRITE |
+              G_PARAM_STATIC_STRINGS)));
   /* Set sink and src pad capabilities */
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gst_dsexample_src_template));
@@ -277,6 +288,9 @@ gst_dsexample_set_property (GObject * object, guint prop_id,
     case PROP_GPU_DEVICE_ID:
       dsexample->gpu_id = g_value_get_uint (value);
       break;
+    case PROP_SRC_MANAGER:
+      dsexample->srcmanager = (sourceManager *)g_value_get_pointer (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -310,6 +324,9 @@ gst_dsexample_get_property (GObject * object, guint prop_id,
       break;
     case PROP_GPU_DEVICE_ID:
       g_value_set_uint (value, dsexample->gpu_id);
+      break;
+    case PROP_SRC_MANAGER:
+      g_value_set_pointer (value, dsexample->srcmanager);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -654,6 +671,15 @@ blur_objects (GstDsExample * dsexample, gint idx,
   return GST_FLOW_OK;
 }
 
+struct algometadata {
+  int count = 1;
+};
+
+static std::unordered_map<int, int> algomap;
+
+static void sendNotifications(string uri){
+  std::cout << "object detected in stream: " << uri << endl;
+}
 /**
  * Called when element recieves an input buffer from upstream element.
  */
@@ -698,141 +724,29 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
     return GST_FLOW_ERROR;
   }
 
-  if (dsexample->process_full_frame) {
-    for (l_frame = batch_meta->frame_meta_list; l_frame != NULL;
-      l_frame = l_frame->next)
-    {
-      frame_meta = (NvDsFrameMeta *) (l_frame->data);
-      NvOSD_RectParams rect_params;
-
-      /* Scale the entire frame to processing resolution */
-      rect_params.left = 0;
-      rect_params.top = 0;
-      rect_params.width = dsexample->video_info.width;
-      rect_params.height = dsexample->video_info.height;
-
-      /* Scale and convert the frame */
-      if (get_converted_mat (dsexample, surface, i, &rect_params,
-            scale_ratio, dsexample->video_info.width,
-            dsexample->video_info.height) != GST_FLOW_OK) {
-        goto error;
-      }
-
-      /* Process to get the output */
-      output =
-          DsExampleProcess (dsexample->dsexamplelib_ctx,
-          dsexample->cvmat->data);
-      /* Attach the metadata for the full frame */
-      attach_metadata_full_frame (dsexample, frame_meta, scale_ratio, output, i);
-      i++;
-      free (output);
-    }
-
-  } else {
-    /* Using object crops as input to the algorithm. The objects are detected by
-     * the primary detector */
+  if (notification) {
     NvDsMetaList * l_obj = NULL;
     NvDsObjectMeta *obj_meta = NULL;
 
-#ifndef __aarch64__
-    if (dsexample->blur_objects) {
-      if (surface->memType != NVBUF_MEM_CUDA_UNIFIED){
-        GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
-            ("%s:need NVBUF_MEM_CUDA_UNIFIED memory for opencv blurring",__func__), (NULL));
-        return GST_FLOW_ERROR;
-      }
-    }
-#endif
-
     for (l_frame = batch_meta->frame_meta_list; l_frame != NULL;
       l_frame = l_frame->next)
     {
       frame_meta = (NvDsFrameMeta *) (l_frame->data);
-      cv::Mat in_mat;
-
-      if (dsexample->blur_objects) {
-        /* Map the buffer so that it can be accessed by CPU */
-        if (surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0] == NULL){
-          if (NvBufSurfaceMap (surface, frame_meta->batch_id, 0, NVBUF_MAP_READ_WRITE) != 0){
-            GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
-                ("%s:buffer map to be accessed by CPU failed", __func__), (NULL));
-            return GST_FLOW_ERROR;
-          }
-        }
-
-        /* Cache the mapped data for CPU access */
-        NvBufSurfaceSyncForCpu (surface, frame_meta->batch_id, 0);
-
-        in_mat =
-            cv::Mat (surface->surfaceList[frame_meta->batch_id].planeParams.height[0],
-            surface->surfaceList[frame_meta->batch_id].planeParams.width[0], CV_8UC4,
-            surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0],
-            surface->surfaceList[frame_meta->batch_id].planeParams.pitch[0]);
-      }
-
       for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
           l_obj = l_obj->next)
       {
         obj_meta = (NvDsObjectMeta *) (l_obj->data);
-
-        if (dsexample->blur_objects) {
-          /* gaussian blur the detected objects using opencv */
-          if (blur_objects (dsexample, frame_meta->batch_id,
-            &obj_meta->rect_params, in_mat) != GST_FLOW_OK) {
-          /* Error in blurring, skip processing on object. */
-            GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
-            ("blurring the object failed"), (NULL));
-            if (NvBufSurfaceUnMap (surface, frame_meta->batch_id, 0)){
-              GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
-                ("%s:buffer unmap to be accessed by CPU failed", __func__), (NULL));
-            }
-            return GST_FLOW_ERROR;
+        auto index = algomap.find(obj_meta->object_id);
+        if(index != algomap.end()){
+          if(index->second == 3){
+            sendNotifications(dsexample->srcmanager->allSources[frame_meta->source_id]->uri);
+            index->second++;
           }
-          continue;
+          else
+            index->second++;
+        } else {
+        algomap.insert(std::pair<int, int>(obj_meta->object_id, 1));
         }
-
-        /* Should not process on objects smaller than MIN_INPUT_OBJECT_WIDTH x MIN_INPUT_OBJECT_HEIGHT
-         * since it will cause hardware scaling issues. */
-        if (obj_meta->rect_params.width < MIN_INPUT_OBJECT_WIDTH ||
-            obj_meta->rect_params.height < MIN_INPUT_OBJECT_HEIGHT)
-          continue;
-
-        /* Crop and scale the object */
-        if (get_converted_mat (dsexample,
-              surface, frame_meta->batch_id, &obj_meta->rect_params,
-              scale_ratio, dsexample->video_info.width,
-              dsexample->video_info.height) != GST_FLOW_OK) {
-          /* Error in conversion, skip processing on object. */
-          continue;
-        }
-
-        /* Process the object crop to obtain label */
-        output = DsExampleProcess (dsexample->dsexamplelib_ctx,
-            dsexample->cvmat->data);
-
-        /* Attach labels for the object */
-        attach_metadata_object (dsexample, obj_meta, output);
-
-        free (output);
-      }
-
-      if (dsexample->blur_objects) {
-      /* Cache the mapped data for device access */
-        NvBufSurfaceSyncForDevice (surface, frame_meta->batch_id, 0);
-
-#ifdef DSEXAMPLE_DEBUG
-        /* Use openCV to remove padding and convert RGBA to BGR. Can be skipped if
-        * algorithm can handle padded RGBA data. */
-#if (CV_MAJOR_VERSION >= 4)
-        cv::cvtColor (in_mat, *dsexample->cvmat, cv::COLOR_RGBA2BGR);
-#else
-        cv::cvtColor (in_mat, *dsexample->cvmat, CV_RGBA2BGR);
-#endif
-        /* used to dump the converted mat to files for debug */
-        static guint cnt = 0;
-        cv::imwrite("out_" + std::to_string (cnt) + ".jpeg", *dsexample->cvmat);
-        cnt++;
-#endif
       }
     }
   }
