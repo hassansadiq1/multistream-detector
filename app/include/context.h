@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <pthread.h>
-
+#include "utils.h"
 #define PGIE_CONFIG_FILE "../../configs/pgie_detector.txt"
 #define SOURCE_PROPERTIES  "../../configs/source_properties.ini"
 #define TRACKER_CONFIG_FILE (char*)"../../configs/tracker_config.txt"
@@ -50,28 +50,6 @@
 #define GST_CAPS_FEATURES_NVMM "memory:NVMM"
 
 using namespace std;
-
-class SourceProperties{
-    public:
-    string uri;
-    int source_id;
-    int TopLeftX;
-    int TopLeftY;
-    int BottomRightX;
-    int BottomRightY;
-};
-
-class sourceManager{
-    public:
-    std::vector<SourceProperties*> allSources;
-    std::vector<int> allSourcesStatus;
-    int num_sources = 0;
-    pthread_mutex_t sourceMapMutex;
-
-    bool sourceExists(int source_id);
-    SourceProperties* getSourceProperties(int source_id);
-
-};
 
 class ProjectContext
 {

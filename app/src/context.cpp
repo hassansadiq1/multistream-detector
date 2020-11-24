@@ -4,10 +4,12 @@ ProjectContext::ProjectContext()
 {
     MUXER_OUTPUT_WIDTH = 1280;
     MUXER_OUTPUT_HEIGHT = 720;
-    MUXER_BATCH_SIZE = 4;
     MUXER_BATCH_TIMEOUT_USEC = 40000;
     TILED_OUTPUT_WIDTH = 1920;
     TILED_OUTPUT_HEIGHT = 1080;
+    char temp_char[4];
+    loadConfig((char *)"MUXER_BATCH_SIZE", temp_char);
+    MUXER_BATCH_SIZE = atoi(temp_char);
 }
 
 void ProjectContext::loadConfig(char *str1, char *str2) {
@@ -57,18 +59,43 @@ void ProjectContext::loadSourceProperties(SourceProperties *properties, int i){
     properties->source_id = atoi(temp_char);
 
     //polygon pareameters
-    temp_str1 = "TopLeftX" + to_string(i);
+    temp_str1 = "polygon_sides" + to_string(i);
     loadConfig((char *) temp_str1.c_str(), temp_char);
-    properties->TopLeftX = atoi(temp_char);
-    temp_str1 = "TopLeftY" + to_string(i);
-    loadConfig((char *) temp_str1.c_str(), temp_char);
-    properties->TopLeftY = atoi(temp_char);
-    temp_str1 = "BottomRightX" + to_string(i);
-    loadConfig((char *) temp_str1.c_str(), temp_char);
-    properties->BottomRightX = atoi(temp_char);
-    temp_str1 = "BottomRightY" + to_string(i);
-    loadConfig((char *) temp_str1.c_str(), temp_char);
-    properties->BottomRightY = atoi(temp_char);
+    properties->polygon_sides = atoi(temp_char);
+
+    properties->polygon = new Point [properties->polygon_sides];
+    temp_str1 = "coordinates" + to_string(i);
+    loadStrConfig((char *) temp_str1.c_str(), temp_str2);
+
+    vector<string> v; 
+    stringstream ss(temp_str2); 
+    while (ss.good()) {
+        string substr;
+        getline(ss, substr, ';');
+        substr.erase(substr.begin());
+        substr.erase(substr.end() - 1);
+        v.push_back(substr);
+    }
+ 
+    for (size_t i = 0; i < v.size(); i++){
+        stringstream ss1(v[i]);
+        int j = 0;
+        Point p;
+        while (ss1.good()) {
+            string substr;
+            getline(ss1, substr, ',');
+            if (j == 0)
+                p.x = atoi(substr.c_str());
+            else
+                p.y = atoi(substr.c_str());
+            j++;
+        }
+        properties->polygon[i] = p;
+    }
+//    for(int i = 0; i < properties->polygon_sides; i++){
+//        cout<<properties->polygon[i].x <<"\t" <<properties->polygon[i].y<<endl;
+//    }
+
 }
 
 bool sourceManager::sourceExists(int source_id){
