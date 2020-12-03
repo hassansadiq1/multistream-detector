@@ -230,8 +230,8 @@ void Pipeline::ConstructPipeline()
         postprocessing, nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
     /* we link the elements together
     * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, postprocessing, tiler,
-            nvvidconv, nvosd, transform, sink, NULL)) {
+    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
+            nvosd, transform, sink, NULL)) {
         g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
     }

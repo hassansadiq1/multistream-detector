@@ -28,6 +28,8 @@
 #include <fstream>
 #include "gstdsexample.h"
 #include <sys/time.h>
+#include <sys/types.h> 
+#include <sys/stat.h> 
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample_debug);
 #define GST_CAT_DEFAULT gst_dsexample_debug
 #define USE_EGLIMAGE 1
@@ -43,7 +45,7 @@ enum
   PROP_PROCESSING_WIDTH,
   PROP_PROCESSING_HEIGHT,
   PROP_PROCESS_FULL_FRAME,
-  PROP_BLUR_OBJECTS,
+  PROP_IMAGES_PATH,
   PROP_GPU_DEVICE_ID,
   PROP_SRC_MANAGER
 };
@@ -70,7 +72,7 @@ enum
 #define DEFAULT_PROCESSING_WIDTH 1280
 #define DEFAULT_PROCESSING_HEIGHT 720
 #define DEFAULT_PROCESS_FULL_FRAME TRUE
-#define DEFAULT_BLUR_OBJECTS FALSE
+#define DEFAULT_IMAGES_PATH (char *)"images/"
 #define DEFAULT_GPU_ID 0
 
 #define RGB_BYTES_PER_PIXEL 3
@@ -199,11 +201,11 @@ gst_dsexample_class_init (GstDsExampleClass * klass)
           "by primary detector", DEFAULT_PROCESS_FULL_FRAME, (GParamFlags)
           (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
-  g_object_class_install_property (gobject_class, PROP_BLUR_OBJECTS,
-      g_param_spec_boolean ("blur-objects",
-          "Blur Objects",
-          "Enable to blur the objects detected in full-frame=0 mode"
-          "by primary detector", DEFAULT_BLUR_OBJECTS, (GParamFlags)
+  g_object_class_install_property (gobject_class, PROP_IMAGES_PATH,
+      g_param_spec_string ("Images-Path",
+          "Saved Images Path",
+          "Save images whenever object detected"
+          "by inference", DEFAULT_IMAGES_PATH, (GParamFlags)
           (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
 
   g_object_class_install_property (gobject_class, PROP_GPU_DEVICE_ID,
@@ -254,7 +256,7 @@ gst_dsexample_init (GstDsExample * dsexample)
   dsexample->processing_width = DEFAULT_PROCESSING_WIDTH;
   dsexample->processing_height = DEFAULT_PROCESSING_HEIGHT;
   dsexample->process_full_frame = DEFAULT_PROCESS_FULL_FRAME;
-  dsexample->blur_objects = DEFAULT_BLUR_OBJECTS;
+  dsexample->images_path = DEFAULT_IMAGES_PATH;
   dsexample->gpu_id = DEFAULT_GPU_ID;
   /* This quark is required to identify NvDsMeta when iterating through
    * the buffer metadatas */
@@ -282,9 +284,10 @@ gst_dsexample_set_property (GObject * object, guint prop_id,
     case PROP_PROCESS_FULL_FRAME:
       dsexample->process_full_frame = g_value_get_boolean (value);
       break;
-    case PROP_BLUR_OBJECTS:
-      dsexample->blur_objects = g_value_get_boolean (value);
-      break;
+    case PROP_IMAGES_PATH:{
+      const char *temp = reinterpret_cast< const char *>(g_value_get_string(value));
+      dsexample->images_path = g_strdup(const_cast < char *>(temp));
+      break;}
     case PROP_GPU_DEVICE_ID:
       dsexample->gpu_id = g_value_get_uint (value);
       break;
@@ -319,8 +322,8 @@ gst_dsexample_get_property (GObject * object, guint prop_id,
     case PROP_PROCESS_FULL_FRAME:
       g_value_set_boolean (value, dsexample->process_full_frame);
       break;
-    case PROP_BLUR_OBJECTS:
-      g_value_set_boolean (value, dsexample->blur_objects);
+    case PROP_IMAGES_PATH:
+      g_value_set_string (value, dsexample->images_path);
       break;
     case PROP_GPU_DEVICE_ID:
       g_value_set_uint (value, dsexample->gpu_id);
@@ -395,6 +398,18 @@ gst_dsexample_start (GstBaseTransform * btrans)
 #else
   create_params.memType = NVBUF_MEM_CUDA_UNIFIED;
 #endif
+
+  mkdir(dsexample->images_path, 0777);
+  char tempstr1[100], tempstr2[100], tempstr3[100];
+  std::strcpy(tempstr1, dsexample->images_path);
+  std::strcat(tempstr1, "top_accuracy");
+  mkdir(tempstr1, 0777);
+  std::strcpy(tempstr2, dsexample->images_path);
+  std::strcat(tempstr2, "middle_accurcy");
+  mkdir(tempstr2, 0777);
+  std::strcpy(tempstr3, dsexample->images_path);
+  std::strcat(tempstr3, "bottom_accuracy");
+  mkdir(tempstr3, 0777);
 
   if (NvBufSurfaceCreate (&dsexample->inter_buf, 1,
           &create_params) != 0) {
@@ -751,6 +766,7 @@ static void sendNotifications(string uri){
 /**
  * Called when element recieves an input buffer from upstream element.
  */
+
 static GstFlowReturn
 gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
 {
@@ -759,6 +775,7 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
   GstFlowReturn flow_ret = GST_FLOW_ERROR;
   gdouble scale_ratio = 1.0;
   DsExampleOutput *output;
+  static guint count = 0;
 
   NvBufSurface *surface = NULL;
   NvDsBatchMeta *batch_meta = NULL;
@@ -800,6 +817,7 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
       l_frame = l_frame->next)
     {
       frame_meta = (NvDsFrameMeta *) (l_frame->data);
+
       for (l_obj = frame_meta->obj_meta_list; l_obj != NULL;
           l_obj = l_obj->next)
       {
@@ -825,6 +843,31 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
                     n, p4)){
                     sendNotifications(dsexample->srcmanager->allSources[frame_meta->source_id]->uri);
                     index->second++;
+                    cv::Mat in_mat;
+                    /* Map the buffer so that it can be accessed by CPU */
+                    if (surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0] == NULL){
+                      if (NvBufSurfaceMap (surface, frame_meta->batch_id, 0, NVBUF_MAP_READ_WRITE) != 0){
+                        GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
+                            ("%s:buffer map to be accessed by CPU failed", __func__), (NULL));
+                        return GST_FLOW_ERROR;
+                      }
+                    }
+                    /* Cache the mapped data for CPU access */
+                    NvBufSurfaceSyncForCpu (surface, frame_meta->batch_id, 0);
+                    in_mat =
+                        cv::Mat (surface->surfaceList[frame_meta->batch_id].planeParams.height[0],
+                        surface->surfaceList[frame_meta->batch_id].planeParams.width[0], CV_8UC4,
+                        surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0],
+                        surface->surfaceList[frame_meta->batch_id].planeParams.pitch[0]);
+                    cv::cvtColor (in_mat, *dsexample->cvmat, cv::COLOR_RGBA2BGR);
+                    if(obj_meta->confidence > 0.6)
+                      cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg", *dsexample->cvmat);
+                    else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4)
+                      cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg"), *dsexample->cvmat);
+                    else{
+                      cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg"), *dsexample->cvmat);
+                    }
+                    count++;
                   }
                 }
               }

@@ -290,7 +290,11 @@ main (int argc, char *argv[])
     pipeline.createElements();
     pipeline.Verify();
     pipeline.Configure();
+
+
+    pipeline.context->loadConfig((char *) "images_path", temp_char);
     g_object_set (G_OBJECT (pipeline.postprocessing),
+        "Images-Path", temp_char,
         "source-manager", &srcmanager, NULL);
 
 

@@ -107,6 +107,8 @@ struct _GstDsExample
   // Boolean indicating if to blur the detected objects
   gboolean blur_objects;
 
+  char * images_path;
+
   sourceManager *srcmanager;
 };
 
