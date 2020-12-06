@@ -15,6 +15,10 @@ To run
 cd ./app
 ./app_main
 ```
+Also to get rtsp address in python run
+````
+python3 sample.py
+````
 
 # 2.	Software dependencies
 ```bash
@@ -30,6 +34,8 @@ cd ./app
      sudo apt-get install -y protobuf-compiler
      sudo apt-get install -y libprotobuf-dev protobuf-compiler
      sudo apt-get install -y ffmpeg
+     sudo apt-get install -y libzmq3-dev
+     pip3 install pyzmq
 ``` 
 # 3.	OS dependencies
 ## You need to have Jetpack 4.4 installed with following:  

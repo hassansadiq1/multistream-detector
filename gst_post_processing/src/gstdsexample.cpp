@@ -30,6 +30,8 @@
 #include <sys/time.h>
 #include <sys/types.h> 
 #include <sys/stat.h> 
+#include <zmq.hpp>
+#include <unistd.h>
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample_debug);
 #define GST_CAT_DEFAULT gst_dsexample_debug
 #define USE_EGLIMAGE 1
@@ -337,6 +339,10 @@ gst_dsexample_get_property (GObject * object, guint prop_id,
   }
 }
 
+//  Prepare our context and socket
+zmq::context_t ctx;
+zmq::socket_t socket1(ctx, zmq::socket_type::pair);
+
 /**
  * Initialize all resources and start the output thread
  */
@@ -410,6 +416,8 @@ gst_dsexample_start (GstBaseTransform * btrans)
   std::strcpy(tempstr3, dsexample->images_path);
   std::strcat(tempstr3, "bottom_accuracy");
   mkdir(tempstr3, 0777);
+
+  socket1.bind("tcp://127.0.0.1:5555");
 
   if (NvBufSurfaceCreate (&dsexample->inter_buf, 1,
           &create_params) != 0) {
@@ -762,6 +770,9 @@ static std::unordered_map<int, int> algomap;
 
 static void sendNotifications(string uri){
   std::cout << "object detected in stream: " << uri << endl;
+  zmq::message_t message (uri.size());
+  memcpy ((void *) message.data(), uri.c_str(), uri.size());
+  socket1.send (message, 1);
 }
 /**
  * Called when element recieves an input buffer from upstream element.

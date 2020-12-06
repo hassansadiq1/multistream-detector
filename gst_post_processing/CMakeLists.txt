@@ -72,6 +72,7 @@ target_link_libraries(nvdsgst_dsexample
         ${GStreamer_video_LIBRARIES}
         ${OpenCV_LIBS}
         ${G_Related_LIBS}
+        -lzmq
 )
 
 install(TARGETS nvdsgst_dsexample DESTINATION /opt/nvidia/deepstream/deepstream-5.0/lib/gst-plugins/)
