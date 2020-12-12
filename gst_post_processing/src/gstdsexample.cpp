@@ -32,6 +32,7 @@
 #include <sys/stat.h> 
 #include <zmq.hpp>
 #include <unistd.h>
+#include <ctime>
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample_debug);
 #define GST_CAT_DEFAULT gst_dsexample_debug
 #define USE_EGLIMAGE 1
@@ -342,7 +343,9 @@ gst_dsexample_get_property (GObject * object, guint prop_id,
 //  Prepare our context and socket
 zmq::context_t ctx;
 zmq::socket_t socket1(ctx, zmq::socket_type::pair);
-
+time_t rawtime;
+struct tm * timeinfo;
+char buffer[80];
 /**
  * Initialize all resources and start the output thread
  */
@@ -871,12 +874,16 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
                         surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0],
                         surface->surfaceList[frame_meta->batch_id].planeParams.pitch[0]);
                     cv::cvtColor (in_mat, *dsexample->cvmat, cv::COLOR_RGBA2BGR);
+                    time (&rawtime);
+                    timeinfo = localtime(&rawtime);
+                    strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
+                    std::string timestr(buffer);
                     if(obj_meta->confidence > 0.6)
-                      cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg", *dsexample->cvmat);
+                      cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg", *dsexample->cvmat);
                     else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4)
-                      cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg"), *dsexample->cvmat);
+                      cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
                     else{
-                      cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + ".jpeg"), *dsexample->cvmat);
+                      cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
                     }
                     count++;
                   }

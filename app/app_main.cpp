@@ -86,6 +86,18 @@ tiler_src_pad_buffer_probe (GstPad * pad, GstPadProbeInfo * info,
     return GST_PAD_PROBE_OK;
 }
 
+vector<string> stringtoVector(string str, char separator){
+    vector<string> v;
+    stringstream ss(str);
+ 
+    while (ss.good()) {
+        string substr;
+        getline(ss, substr, separator);
+        v.push_back(substr);
+    }
+    return v;
+}
+
 static gboolean
 bus_call (GstBus * bus, GstMessage * msg, gpointer data)
 {
@@ -116,6 +128,12 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
             GST_OBJECT_NAME (msg->src), error->message);
         if (debug)
             g_printerr ("Error details: %s\n", debug);
+
+        string tempstr(debug);
+        vector<string> v1 = stringtoVector(tempstr,'/');
+        vector<string> v2 = stringtoVector(v1[2],'-');
+        int num = stoi(v2[2]);
+        srcmanager.allSourcesStatus[num] = 0;
         g_free (debug);
         g_error_free (error);
         g_main_loop_quit (loop);
@@ -452,7 +470,7 @@ main (int argc, char *argv[])
                 std::cout << "Camera Ping Unsuccessful.\n";
             }
         }
-        sleep(5);
+        sleep(10);
         }
 
     if(PipelineExecutor.joinable()){
