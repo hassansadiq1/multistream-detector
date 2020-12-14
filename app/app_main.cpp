@@ -129,11 +129,6 @@ bus_call (GstBus * bus, GstMessage * msg, gpointer data)
         if (debug)
             g_printerr ("Error details: %s\n", debug);
 
-        string tempstr(debug);
-        vector<string> v1 = stringtoVector(tempstr,'/');
-        vector<string> v2 = stringtoVector(v1[2],'-');
-        int num = stoi(v2[2]);
-        srcmanager.allSourcesStatus[num] = 0;
         g_free (debug);
         g_error_free (error);
         g_main_loop_quit (loop);

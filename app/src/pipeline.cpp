@@ -185,7 +185,7 @@ void Pipeline::Configure()
     g_object_set (G_OBJECT (streammux), "batch-size", num_sources, NULL);
 
     g_object_set (G_OBJECT (streammux), "width", context->MUXER_OUTPUT_WIDTH, "height",
-        context->MUXER_OUTPUT_HEIGHT,
+        context->MUXER_OUTPUT_HEIGHT, "live-source", 1,
         "batched-push-timeout", context->MUXER_BATCH_TIMEOUT_USEC, NULL);
 
     /* Configure the nvinfer element using the nvinfer config file. */
@@ -216,7 +216,7 @@ void Pipeline::Configure()
     g_object_set (G_OBJECT (nvosd), "process-mode", OSD_PROCESS_MODE,
         "display-text", OSD_DISPLAY_TEXT, NULL);
 
-    g_object_set (G_OBJECT (sink), "qos", 0, "sync", 0, NULL);
+    g_object_set (G_OBJECT (sink), "sync", 0, NULL);
 }
 
 void Pipeline::ConstructPipeline()
