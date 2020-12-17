@@ -225,7 +225,6 @@ void Pipeline::ConstructPipeline()
 
 /* Set up the pipeline */
 /* we add all elements into the pipeline */
-#ifdef __aarch64__
     gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
         postprocessing, nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
     /* we link the elements together
@@ -235,17 +234,6 @@ void Pipeline::ConstructPipeline()
         g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
     }
-#else
-    gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, queue2, tiler, queue3,
-        nvvidconv, queue4, nvosd, queue5, sink, NULL);
-    /* we link the elements together
-    * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    if (!gst_element_link_many (streammux, queue1, pgie, queue2, tiler, queue3,
-            nvvidconv, queue4, nvosd, queue5, sink, NULL)) {
-        g_printerr ("Elements could not be linked. Exiting.\n");
-        exit(-1);
-    }
-#endif
 }
 
 void Pipeline::RunPipelineAsync()
@@ -258,7 +246,7 @@ void Pipeline::RunPipelineAsync()
             // Set the pipeline to "playing" state
             gst_element_set_state(this->pipeline, GST_STATE_PLAYING);
             g_main_loop_run(this->loop);
-            sleep(1);
+            sleep(2);
         }
     }
     return;
