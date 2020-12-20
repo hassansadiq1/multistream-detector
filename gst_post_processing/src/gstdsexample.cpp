@@ -33,6 +33,8 @@
 #include <zmq.hpp>
 #include <unistd.h>
 #include <ctime>
+
+using namespace std::chrono;
 GST_DEBUG_CATEGORY_STATIC (gst_dsexample_debug);
 #define GST_CAT_DEFAULT gst_dsexample_debug
 #define USE_EGLIMAGE 1
@@ -50,7 +52,8 @@ enum
   PROP_PROCESS_FULL_FRAME,
   PROP_IMAGES_PATH,
   PROP_GPU_DEVICE_ID,
-  PROP_SRC_MANAGER
+  PROP_SRC_MANAGER,
+  PROP_NOTIFY_TIMEOUT
 };
 
 #define CHECK_NVDS_MEMORY_AND_GPUID(object, surface)  \
@@ -77,6 +80,7 @@ enum
 #define DEFAULT_PROCESS_FULL_FRAME TRUE
 #define DEFAULT_IMAGES_PATH (char *)"images/"
 #define DEFAULT_GPU_ID 0
+#define DEFAULT_NOTIFY_TIMEOUT 20
 
 #define RGB_BYTES_PER_PIXEL 3
 #define RGBA_BYTES_PER_PIXEL 4
@@ -227,6 +231,14 @@ gst_dsexample_class_init (GstDsExampleClass * klass)
           GParamFlags
           (G_PARAM_READWRITE |
               G_PARAM_STATIC_STRINGS)));
+
+  g_object_class_install_property (gobject_class, PROP_NOTIFY_TIMEOUT,
+      g_param_spec_int ("notify-timeout",
+          "notification timeout in seconds",
+          "will send notification after timeout",
+          1, G_MAXINT, DEFAULT_NOTIFY_TIMEOUT, (GParamFlags)
+          (G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS)));
+
   /* Set sink and src pad capabilities */
   gst_element_class_add_pad_template (gstelement_class,
       gst_static_pad_template_get (&gst_dsexample_src_template));
@@ -261,6 +273,8 @@ gst_dsexample_init (GstDsExample * dsexample)
   dsexample->process_full_frame = DEFAULT_PROCESS_FULL_FRAME;
   dsexample->images_path = DEFAULT_IMAGES_PATH;
   dsexample->gpu_id = DEFAULT_GPU_ID;
+  dsexample->timeout = DEFAULT_NOTIFY_TIMEOUT;
+
   /* This quark is required to identify NvDsMeta when iterating through
    * the buffer metadatas */
   if (!_dsmeta_quark)
@@ -296,6 +310,9 @@ gst_dsexample_set_property (GObject * object, guint prop_id,
       break;
     case PROP_SRC_MANAGER:
       dsexample->srcmanager = (sourceManager *)g_value_get_pointer (value);
+      break;
+    case PROP_NOTIFY_TIMEOUT:
+      dsexample->timeout = g_value_get_int (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -333,6 +350,9 @@ gst_dsexample_get_property (GObject * object, guint prop_id,
       break;
     case PROP_SRC_MANAGER:
       g_value_set_pointer (value, dsexample->srcmanager);
+      break;
+    case PROP_NOTIFY_TIMEOUT:
+      g_value_set_int (value, dsexample->timeout);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -419,6 +439,7 @@ gst_dsexample_start (GstBaseTransform * btrans)
   std::strcpy(tempstr3, dsexample->images_path);
   std::strcat(tempstr3, "bottom_accuracy");
   mkdir(tempstr3, 0777);
+  dsexample->ftimeout = float(dsexample->timeout);
 
   socket1.bind("tcp://127.0.0.1:5555");
 
@@ -770,7 +791,9 @@ struct algometadata {
 };
 
 static std::unordered_map<int, int> algomap;
-
+high_resolution_clock::time_point t1 = high_resolution_clock::now();
+high_resolution_clock::time_point t2 = high_resolution_clock::now();
+duration<double> t3;
 static void sendNotifications(string uri){
   std::cout << "object detected in stream: " << uri << endl;
   zmq::message_t message (uri.size());
@@ -822,7 +845,6 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
         ("NvDsBatchMeta not found for input buffer."), (NULL));
     return GST_FLOW_ERROR;
   }
-
   if (notification) {
     NvDsMetaList * l_obj = NULL;
     NvDsObjectMeta *obj_meta = NULL;
@@ -855,7 +877,12 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
                     int(obj_meta->rect_params.top + obj_meta->rect_params.height)};
                   if(isInside(dsexample->srcmanager->allSources[frame_meta->source_id]->polygon,
                     n, p4)){
+                    t2 = high_resolution_clock::now();
+                    t3 = duration_cast<duration<double>>(t2 - t1);
+                    if (t3.count() > dsexample->ftimeout){
+                    t1 = high_resolution_clock::now();
                     sendNotifications(dsexample->srcmanager->allSources[frame_meta->source_id]->uri);
+                    }
                     index->second++;
                     cv::Mat in_mat;
                     /* Map the buffer so that it can be accessed by CPU */

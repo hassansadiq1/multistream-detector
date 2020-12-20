@@ -25,7 +25,7 @@ void checkInactiveSource(vector<int> source_ids){
         if (srcmanager.allSources[i]->firstFrame){
             srcmanager.allSources[i]->consectiveMissedFrames++;
         }
-        if (srcmanager.allSources[i]->consectiveMissedFrames > 30){
+        if (srcmanager.allSources[i]->consectiveMissedFrames > 50){
             if (srcmanager.allSourcesStatus[i] != 0){
                 cout << "Got End of Stream from: " << srcmanager.allSources[i]->uri<<endl;
                 srcmanager.allSourcesStatus[i] = 0;
@@ -268,11 +268,15 @@ main (int argc, char *argv[])
     pipeline.Verify();
     pipeline.Configure();
 
+    pipeline.context->loadConfig((char *) "timeout", temp_char);
+    int notifyTimeout = atoi(temp_char);
 
     pipeline.context->loadConfig((char *) "images_path", temp_char);
     g_object_set (G_OBJECT (pipeline.postprocessing),
         "Images-Path", temp_char,
-        "source-manager", &srcmanager, NULL);
+        "source-manager", &srcmanager,
+        "notify-timeout", notifyTimeout,
+        NULL);
 
 
     /* we add a message handler */

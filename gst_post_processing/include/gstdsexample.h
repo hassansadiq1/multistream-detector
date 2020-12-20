@@ -110,6 +110,9 @@ struct _GstDsExample
   char * images_path;
 
   sourceManager *srcmanager;
+
+  int timeout;
+  float ftimeout;
 };
 
 // Boiler plate stuff
