@@ -905,12 +905,26 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
                     timeinfo = localtime(&rawtime);
                     strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
                     std::string timestr(buffer);
-                    if(obj_meta->confidence > 0.6)
+                    std::string labeltxt = string(obj_meta->obj_label) + " 0.0 0 0.146 " +
+                     to_string(obj_meta->rect_params.left) + " " + to_string(obj_meta->rect_params.top) + " " +
+                     to_string(obj_meta->rect_params.left + obj_meta->rect_params.width) + " " +
+                     to_string(obj_meta->rect_params.top + obj_meta->rect_params.height) + " " +
+                     "1.89 0.48 1.20 1.84 1.47 8.41 0.01";
+                    if(obj_meta->confidence > 0.6){
                       cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg", *dsexample->cvmat);
-                    else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4)
+                      std::ofstream out(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                      out << labeltxt;
+                      out.close();
+                    } else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4){
                       cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
-                    else{
+                      std::ofstream out(string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                      out << labeltxt;
+                      out.close();
+                    } else{
                       cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
+                      std::ofstream out(string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                      out << labeltxt;
+                      out.close();
                     }
                     count++;
                   }
