@@ -5,8 +5,8 @@ ProjectContext::ProjectContext()
     MUXER_OUTPUT_WIDTH = 1280;
     MUXER_OUTPUT_HEIGHT = 720;
     MUXER_BATCH_TIMEOUT_USEC = 125000;
-    TILED_OUTPUT_WIDTH = 1920;
-    TILED_OUTPUT_HEIGHT = 1080;
+    TILED_OUTPUT_WIDTH = 1280;
+    TILED_OUTPUT_HEIGHT = 720;
     char temp_char[4];
     loadConfig((char *)"MUXER_BATCH_SIZE", temp_char);
     MUXER_BATCH_SIZE = atoi(temp_char);

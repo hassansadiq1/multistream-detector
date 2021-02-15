@@ -11,6 +11,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/app_main.cpp"
                   "${PROJECT_SOURCE_DIR}/src/context.cpp"
                   "${PROJECT_SOURCE_DIR}/src/pipeline.cpp"
+                  "${PROJECT_SOURCE_DIR}/src/probes.cpp"
                   )
 
 find_package(PkgConfig)

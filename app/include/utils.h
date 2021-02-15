@@ -24,8 +24,8 @@ class SourceProperties{
     string uri;
     int source_id;
     int polygon_sides;
-    Point * polygon;
-    int consectiveMissedFrames = 0;
+    Point * polygon; // what a noob i was
+    int consecutiveMissedFrames = 0;
     bool firstFrame = 0;
 };
 
