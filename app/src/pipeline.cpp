@@ -125,7 +125,7 @@ void Pipeline::createElements()
 
     /*custom plugin for post processing */
     postprocessing = gst_element_factory_make("dsexample", "post-processing");
-
+    
     /* Add queue elements between every two elements */
     queue1 = gst_element_factory_make ("queue", "queue1");
     queue2 = gst_element_factory_make ("queue", "queue2");
@@ -223,25 +223,33 @@ void Pipeline::ConstructPipeline()
 {
   gst_bin_add (GST_BIN (pipeline), streammux);
 
-/* Set up the pipeline */
-/* we add all elements into the pipeline */
-    gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
-        postprocessing, nvvidconv, queue4, nvosd, queue5,
-#ifdef __aarch64__
-    transform,
-#endif
-     sink, NULL);
-    /* we link the elements together
-    * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
-            nvosd,
-#ifdef __aarch64__
-    transform,
-#endif
-     sink, NULL)) {
+  /* Set up the pipeline */
+  /* we add all elements into the pipeline */
+
+  #ifdef __aarch64__
+	gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
+        postprocessing, nvvidconv, queue4, nvosd, queue5, transform, sink, NULL);
+  #else
+        gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
+        postprocessing, nvvidconv, queue4, nvosd, queue5, sink, NULL);
+  #endif
+
+  /* we link the elements together
+  * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
+  #ifdef __aarch64__
+	if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
+            nvosd,transform, sink, NULL)) {
         g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
-    }
+    	}
+  #else
+       if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
+            nvosd, sink, NULL)) {
+        g_printerr ("Elements could not be linked. Exiting.\n");
+        exit(-1);
+    	}
+  #endif
+
 }
 
 void Pipeline::RunPipelineAsync()

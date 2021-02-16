@@ -58,6 +58,9 @@ include_directories(${GStreamer_INCLUDE_DIRS})
 include_directories(${GStreamer_base_INCLUDE_DIRS})
 include_directories(${GStreamer_plugins_bad_INCLUDE_DIRS})
 include_directories(${GStreamer_video_INCLUDE_DIRS})
+
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
  
 include_directories(${PROJECT_SOURCE_DIR}/../app/include)
 AUX_SOURCE_DIRECTORY(src SRC)
