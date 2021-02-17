@@ -226,25 +226,32 @@ void Pipeline::Configure() {
 void Pipeline::ConstructPipeline() {
     gst_bin_add(GST_BIN (pipeline), streammux);
 
-/* Set up the pipeline */
-/* we add all elements into the pipeline */
-    gst_bin_add_many(GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
-                     postprocessing, nvvidconv, queue4, nvosd, queue5,
+    /* Set up the pipeline */
+    /* we add all elements into the pipeline */
+
 #ifdef __aarch64__
-                     transform,
+    gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
+                      postprocessing, nvvidconv, queue4, nvosd, queue5, transform, fpsdisplay, NULL);
+#else
+    gst_bin_add_many (GST_BIN (pipeline), queue1, pgie, nvtracker, queue2, tiler, queue3,
+        postprocessing, nvvidconv, queue4, nvosd, queue5, fpsdisplay, NULL);
 #endif
-                     fpsdisplay, NULL);
+
     /* we link the elements together
     * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
-    if (!gst_element_link_many(streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
-                               nvosd,
 #ifdef __aarch64__
-                               transform,
-#endif
-                               fpsdisplay, NULL)) {
-        g_printerr("Elements could not be linked. Exiting.\n");
+    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
+                                nvosd,transform, fpsdisplay, NULL)) {
+        g_printerr ("Elements could not be linked. Exiting.\n");
         exit(-1);
     }
+#else
+    if (!gst_element_link_many (streammux, queue1, pgie, nvtracker, nvvidconv, postprocessing, tiler,
+            nvosd, fpsdisplay, NULL)) {
+        g_printerr ("Elements could not be linked. Exiting.\n");
+        exit(-1);
+    	}
+#endif
 }
 
 void Pipeline::RunPipelineAsync() {
