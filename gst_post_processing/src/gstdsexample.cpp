@@ -884,48 +884,48 @@ gst_dsexample_transform_ip (GstBaseTransform * btrans, GstBuffer * inbuf)
                     sendNotifications(dsexample->srcmanager->allSources[frame_meta->source_id]->uri);
                     }
                     index->second++;
-                    cv::Mat in_mat;
-                    /* Map the buffer so that it can be accessed by CPU */
-                    if (surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0] == NULL){
-                      if (NvBufSurfaceMap (surface, frame_meta->batch_id, 0, NVBUF_MAP_READ_WRITE) != 0){
-                        GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
-                            ("%s:buffer map to be accessed by CPU failed", __func__), (NULL));
-                        return GST_FLOW_ERROR;
-                      }
-                    }
-                    /* Cache the mapped data for CPU access */
-                    NvBufSurfaceSyncForCpu (surface, frame_meta->batch_id, 0);
-                    in_mat =
-                        cv::Mat (surface->surfaceList[frame_meta->batch_id].planeParams.height[0],
-                        surface->surfaceList[frame_meta->batch_id].planeParams.width[0], CV_8UC4,
-                        surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0],
-                        surface->surfaceList[frame_meta->batch_id].planeParams.pitch[0]);
-                    cv::cvtColor (in_mat, *dsexample->cvmat, cv::COLOR_RGBA2BGR);
-                    time (&rawtime);
-                    timeinfo = localtime(&rawtime);
-                    strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
-                    std::string timestr(buffer);
-                    std::string labeltxt = string(obj_meta->obj_label) + " 0.0 0 0.146 " +
-                     to_string(obj_meta->rect_params.left) + " " + to_string(obj_meta->rect_params.top) + " " +
-                     to_string(obj_meta->rect_params.left + obj_meta->rect_params.width) + " " +
-                     to_string(obj_meta->rect_params.top + obj_meta->rect_params.height) + " " +
-                     "1.89 0.48 1.20 1.84 1.47 8.41 0.01";
-                    if(obj_meta->confidence > 0.6){
-                      cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg", *dsexample->cvmat);
-                      std::ofstream out(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
-                      out << labeltxt;
-                      out.close();
-                    } else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4){
-                      cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
-                      std::ofstream out(string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
-                      out << labeltxt;
-                      out.close();
-                    } else{
-                      cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
-                      std::ofstream out(string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
-                      out << labeltxt;
-                      out.close();
-                    }
+                    // cv::Mat in_mat;
+                    // /* Map the buffer so that it can be accessed by CPU */
+                    // if (surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0] == NULL){
+                    //   if (NvBufSurfaceMap (surface, frame_meta->batch_id, 0, NVBUF_MAP_READ_WRITE) != 0){
+                    //     GST_ELEMENT_ERROR (dsexample, STREAM, FAILED,
+                    //         ("%s:buffer map to be accessed by CPU failed", __func__), (NULL));
+                    //     return GST_FLOW_ERROR;
+                    //   }
+                    // }
+                    // /* Cache the mapped data for CPU access */
+                    // NvBufSurfaceSyncForCpu (surface, frame_meta->batch_id, 0);
+                    // in_mat =
+                    //     cv::Mat (surface->surfaceList[frame_meta->batch_id].planeParams.height[0],
+                    //     surface->surfaceList[frame_meta->batch_id].planeParams.width[0], CV_8UC4,
+                    //     surface->surfaceList[frame_meta->batch_id].mappedAddr.addr[0],
+                    //     surface->surfaceList[frame_meta->batch_id].planeParams.pitch[0]);
+                    // cv::cvtColor (in_mat, *dsexample->cvmat, cv::COLOR_RGBA2BGR);
+                    // time (&rawtime);
+                    // timeinfo = localtime(&rawtime);
+                    // strftime(buffer,sizeof(buffer),"%d-%m-%Y %H:%M:%S",timeinfo);
+                    // std::string timestr(buffer);
+                    // std::string labeltxt = string(obj_meta->obj_label) + " 0.0 0 0.146 " +
+                    //  to_string(obj_meta->rect_params.left) + " " + to_string(obj_meta->rect_params.top) + " " +
+                    //  to_string(obj_meta->rect_params.left + obj_meta->rect_params.width) + " " +
+                    //  to_string(obj_meta->rect_params.top + obj_meta->rect_params.height) + " " +
+                    //  "1.89 0.48 1.20 1.84 1.47 8.41 0.01";
+                    // if(obj_meta->confidence > 0.6){
+                    //   cv::imwrite(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg", *dsexample->cvmat);
+                    //   std::ofstream out(string(dsexample->images_path) + "top_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                    //   out << labeltxt;
+                    //   out.close();
+                    // } else if(obj_meta->confidence < 0.6 and obj_meta->confidence > 0.4){
+                    //   cv::imwrite((string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
+                    //   std::ofstream out(string(dsexample->images_path) + "middle_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                    //   out << labeltxt;
+                    //   out.close();
+                    // } else{
+                    //   cv::imwrite((string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".jpeg"), *dsexample->cvmat);
+                    //   std::ofstream out(string(dsexample->images_path) + "bottom_accuracy/" + string(obj_meta->obj_label) + "_" + std::to_string (count) + "_" + timestr + ".txt");
+                    //   out << labeltxt;
+                    //   out.close();
+                    // }
                     count++;
                   }
                 }
