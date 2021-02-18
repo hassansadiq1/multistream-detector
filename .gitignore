@@ -2,3 +2,8 @@ build/
 *.engine
 *.vscode*
 images/
+.idea/
+cmake-build-debug/
+cmake-build-default-jetsonpublic
+sampleTest.py
+.clion.source.upload.marker
