@@ -33,6 +33,7 @@ public:
     std::vector<GstElement*> sourcebins;
     sourceManager source_manager;
     ProjectContext *context;
+    GMutex Lock1;
 
     void createElements();
 

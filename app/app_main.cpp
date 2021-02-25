@@ -14,7 +14,7 @@
 
 bool running;
 sourceManager srcmanager;
-
+int sourcebinCount = 0;
 void checkInactiveSource(vector<int> source_ids){
 
     for(int i = 0; i < source_ids.size(); i++){
@@ -25,12 +25,13 @@ void checkInactiveSource(vector<int> source_ids){
         if (srcmanager.allSources[i]->firstFrame){
             srcmanager.allSources[i]->consectiveMissedFrames++;
         }
-        if (srcmanager.allSources[i]->consectiveMissedFrames > 50){
-            if (srcmanager.allSourcesStatus[i] != 0){
+        if (srcmanager.allSources[i]->consectiveMissedFrames > 80){
+            if (srcmanager.allSourcesStatus[i] == 1){
                 cout << "Got End of Stream from: " << srcmanager.allSources[i]->uri<<endl;
-                srcmanager.allSourcesStatus[i] = 0;
+                srcmanager.allSourcesStatus[i] = 2;
                 srcmanager.allSources[i]->firstFrame = 0;
-            }
+            } else
+                srcmanager.allSources[i]->consectiveMissedFrames = 0;
         }
     }
 }
@@ -260,6 +261,7 @@ main (int argc, char *argv[])
     thread PipelineExecutor;
 
     pipeline.loop = g_main_loop_new (NULL, FALSE);
+    g_mutex_init(&pipeline.Lock1);
 
     pipeline.context->loadConfig((char *) "num_sources", temp_char);
     pipeline.num_sources = atoi(temp_char);
@@ -317,10 +319,10 @@ main (int argc, char *argv[])
         gchar pad_name[16] = { };
 
         GstElement *source_bin = create_source_bin (i, (char *)src->uri.c_str());
-
+        sourcebinCount++;
         if (!source_bin) {
-            g_printerr ("Failed to create source bin. Exiting.\n");
-            return -1;
+            g_printerr ("Failed to create source bin. Adding to Ping list again.\n");
+            continue;
         }
 
         gst_bin_add (GST_BIN (pipeline.pipeline), source_bin);
@@ -328,19 +330,19 @@ main (int argc, char *argv[])
         g_snprintf (pad_name, 15, "sink_%u", i);
         sinkpad = gst_element_get_request_pad (pipeline.streammux, pad_name);
         if (!sinkpad) {
-            g_printerr ("Streammux request sink pad failed. Exiting.\n");
-            return -1;
+            g_printerr ("Streammux request resink pad failed. Adding to Ping list again.\n");
+            continue;
         }
 
         srcpad = gst_element_get_static_pad (source_bin, "src");
         if (!srcpad) {
-            g_printerr ("Failed to get src pad of source bin. Exiting.\n");
-            return -1;
+            g_printerr ("Failed to get src pad of source bin. Exiting. Adding to Ping list again\n");
+            continue;
         }
 
         if (gst_pad_link (srcpad, sinkpad) != GST_PAD_LINK_OK) {
-            g_printerr ("Failed to link source bin to stream muxer. Exiting.\n");
-            return -1;
+            g_printerr ("Failed to link source bin to restream muxer. Adding to Ping list again.\n");
+            continue;
         }
 
         gst_object_unref (srcpad);
@@ -357,7 +359,7 @@ main (int argc, char *argv[])
 
             case GST_STATE_CHANGE_FAILURE:
                 g_printerr("State change: Failure");
-                srcmanager.allSourcesStatus[i] = 0;
+                srcmanager.allSourcesStatus[i] = 2;
                 break;
             default:
                 break;
@@ -370,21 +372,16 @@ main (int argc, char *argv[])
         for (int i = 0; i < srcmanager.allSources.size(); i++){
             if(srcmanager.allSourcesStatus[i] == 0){
                 string uri = srcmanager.allSources[i]->uri;
-
                 if(ping_ip_cam(uri)){
                     std::cout << "Camera Ping Successful. Adding it again to pipeline\n";
+
                     gchar pad_name[16] = { };
-                    GstPad *sinkpad;
                     g_snprintf(pad_name, 15, "sink_%u", i);
-                    sinkpad = gst_element_get_static_pad(pipeline.streammux, pad_name);
-                    gst_element_release_request_pad(pipeline.streammux, sinkpad);
-                    gst_element_set_state(pipeline.sourcebins[i], GST_STATE_NULL);
-                    gst_bin_remove(GST_BIN (pipeline.pipeline), pipeline.sourcebins[i]);
-                    gst_object_unref(sinkpad);
 
                     GstPad *resinkpad, *srcpad;
 
-                    GstElement *source_bin = create_source_bin (i, (char *)uri.c_str());
+                    GstElement *source_bin = create_source_bin (sourcebinCount, (char *)uri.c_str());
+                    sourcebinCount++;
                     if (!source_bin) {
                         g_printerr ("Failed to create source bin. Exiting.\n");
                     }
@@ -429,11 +426,25 @@ main (int argc, char *argv[])
                         default:
                             break;
                     }
-                }
-                std::cout << "Camera Ping Unsuccessful.\n";
+                } else
+                    std::cout << "Camera Ping Unsuccessful.\n";
+            } else if(srcmanager.allSourcesStatus[i] == 2){
+                gchar pad_name[16] = { };
+                GstPad *sinkpad;
+                g_snprintf(pad_name, 15, "sink_%u", i);
+                g_mutex_lock(&pipeline.Lock1);
+                sinkpad = gst_element_get_static_pad(pipeline.streammux, pad_name);
+                gst_element_release_request_pad(pipeline.streammux, sinkpad);
+                gst_element_set_state(pipeline.sourcebins[i], GST_STATE_NULL);
+                gst_bin_remove(GST_BIN (pipeline.pipeline), pipeline.sourcebins[i]);
+                gst_element_set_state(pipeline.pipeline, GST_STATE_PLAYING);
+                gst_object_unref(sinkpad);
+                g_mutex_unlock(&pipeline.Lock1);
+                std::cout<<"Removed stream data of "<<srcmanager.allSources[i]->uri<<std::endl;
+                srcmanager.allSourcesStatus[i] = 0;
             }
         }
-        sleep(10);
+        sleep(5);
         }
 
     if(PipelineExecutor.joinable()){
