@@ -9,9 +9,10 @@ set(CMAKE_CONFIGURATION_TYPES "Debug" CACHE STRING "" FORCE)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/app_main.cpp"
-                  "${PROJECT_SOURCE_DIR}/src/context.cpp"
-                  "${PROJECT_SOURCE_DIR}/src/pipeline.cpp"
-                  )
+        "${PROJECT_SOURCE_DIR}/src/context.cpp"
+        "${PROJECT_SOURCE_DIR}/src/pipeline.cpp"
+        "${PROJECT_SOURCE_DIR}/src/probes.cpp"
+        )
 
 find_package(PkgConfig)
 pkg_check_modules(GST REQUIRED gstreamer-1.0 gstreamer-video-1.0)
