@@ -25,7 +25,7 @@ class SourceProperties{
     int source_id;
     int polygon_sides;
     Point * polygon;
-    int consectiveMissedFrames = 0;
+    int consecutiveMissedFrames = 0;
     bool firstFrame = 0;
 };
 
